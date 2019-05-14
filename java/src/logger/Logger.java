@@ -2,7 +2,6 @@ package logger;
 
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public abstract class Logger extends Thread{

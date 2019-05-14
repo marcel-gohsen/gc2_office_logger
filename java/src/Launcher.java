@@ -3,10 +3,6 @@ import logger.WinProcessLogger;
 import os.OS;
 import setup.Setup;
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
