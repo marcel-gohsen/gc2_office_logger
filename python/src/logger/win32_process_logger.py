@@ -9,7 +9,7 @@ import time
 
 
 class Win32ProcessLogger:
-    def __init__(self):
+    def __init__(self, target_freq=None):
         self.wmi = win32client.GetObject("winmgmts:")
         self.id_history = []
 
@@ -22,12 +22,11 @@ class Win32ProcessLogger:
         os.makedirs("logs", exist_ok=True)
 
         self.out_file = open(os.path.join("logs", self.mac.replace(":", "-") + ".json"), "w+")
+        self.target_freq = target_freq
 
     def __window_callback(self, hwnd, hwnds):
-        process_info = {}
+        process_info = {"iter_id": self.iteration_count, "timestamp": datetime.datetime.now().isoformat()}
 
-        process_info["iter_id"] = self.iteration_count
-        process_info["timestamp"] = datetime.datetime.now().isoformat()
         thread_process_id = win32process.GetWindowThreadProcessId(hwnd)
         process_info["process_id"] = thread_process_id[1]
         process_info["thread_id"] = thread_process_id[0]
@@ -38,7 +37,8 @@ class Win32ProcessLogger:
         self.id_history.append(
             str(process_info["process_id"]) + "-" + str(process_info["thread_id"]))
 
-        children = self.wmi.ExecQuery("Select * from win32_process where ProcessId=" + str(process_info["process_id"]))
+        children = self.wmi.ExecQuery("Select * from win32_process "
+                                      "where ProcessId=" + str(process_info["process_id"]))
         for child in children:
             process_info["process_name"] = child.Name
             process_info["exec_path"] = child.ExecutablePath
@@ -58,20 +58,34 @@ class Win32ProcessLogger:
             process_info["user_time"] = process_times["UserTime"] * 100 / (10 ** 6)
             process_info["memory"] = win32process.GetProcessMemoryInfo(h_proc)
             process_info["io_counter"] = win32process.GetProcessIoCounters(h_proc)
-        except Exception as e:
+        except Exception:
             pass
 
         self.out_file.write(str(process_info) + "\n")
 
     def log(self):
         freq = 0
+        target_period = None
+
+        if self.target_freq is not None:
+            target_period = 1 / self.target_freq
+
         while True:
-            print("\rLogging freq: " + str(freq) + " Hz", end="")
             start = time.time()
+
+            print("\rLogging freq: " + str(freq) + " Hz", end="")
+
             hwnds = []
             self.id_history = []
+
             win32gui.EnumWindows(self.__window_callback, hwnds)
 
             self.iteration_count += 1
             self.out_file.flush()
+
+            period = time.time() - start
+
+            if target_period is not None:
+                time.sleep(max(target_period - period, 0))
+
             freq = 1 / (time.time() - start)

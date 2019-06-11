@@ -5,7 +5,7 @@ from logger.win32_process_logger import Win32ProcessLogger
 
 
 def main():
-    logger = Win32ProcessLogger()
+    logger = Win32ProcessLogger(target_freq=0.25)
     logger.log()
 
     time.sleep(100)
