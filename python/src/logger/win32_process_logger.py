@@ -7,8 +7,10 @@ import datetime
 import os
 import time
 
+from logger.logger import Logger
 
-class Win32ProcessLogger:
+
+class Win32ProcessLogger(Logger):
     def __init__(self, target_freq=None):
         self.wmi = win32client.GetObject("winmgmts:")
         self.id_history = []

@@ -1,13 +1,21 @@
 import time
 import traceback
-
-from logger.win32_process_logger import Win32ProcessLogger
+import platform
 
 
 def main():
-    logger = Win32ProcessLogger(target_freq=0.25)
-    logger.log()
+    logger = None
 
+    if platform.system() == "Linux":
+        from logger.linux_process_logger import LinuxProcessLogger
+        logger = LinuxProcessLogger()
+    elif platform.system() == "Windows":
+        from logger.win32_process_logger import Win32ProcessLogger
+        logger = Win32ProcessLogger(target_freq=0.25)
+    else:
+        raise RuntimeError("Unsupported OS " + str(platform.system()))
+
+    logger.log()
     time.sleep(100)
 
 

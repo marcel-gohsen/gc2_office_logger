@@ -1,0 +1,29 @@
+name: gc2_office_logger
+channels:
+  - defaults
+dependencies:
+  - ca-certificates=2019.5.15=0
+  - certifi=2016.2.28=py34_0
+  - libedit=3.1.20181209=hc058e9b_0
+  - libffi=3.2.1=hd88cf55_4
+  - libgcc-ng=8.2.0=hdf63c60_1
+  - libstdcxx-ng=8.2.0=hdf63c60_1
+  - ncurses=6.1=he6710b0_1
+  - openssl=1.0.1k=1
+  - python=3.4.0=0
+  - readline=6.2=2
+  - setuptools=27.2.0=py34_0
+  - sqlite=3.28.0=h7b6447c_0
+  - system=5.8=2
+  - tk=8.5.18=0
+  - wheel=0.29.0=py34_0
+  - xz=5.2.4=h14c3975_4
+  - zlib=1.2.11=h7b6447c_3
+  - pip:
+    - cx-freeze==4.3.3
+    - natsort==6.0.0
+    - pip==19.1.1
+    - psutil==5.6.3
+    - pysheet==0.3.14
+prefix: /home/kipu5728/Programs/anaconda3/envs/gc2_office_logger
+
