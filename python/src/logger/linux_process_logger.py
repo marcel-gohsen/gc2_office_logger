@@ -15,13 +15,44 @@ class LinuxProcessLogger(Logger):
         self.mac_address = getnode()
         self.mac_address = ":".join(("%012X" % self.mac_address)[i:i + 2] for i in range(0, 12, 2))
 
-        self.out_file_path = "./logs/" + self.mac_address + "/"
+        self.out_file_dir_path = "./logs/" + self.mac_address + "/"
 
-        if not os.path.exists(self.out_file_path):
-            os.makedirs(self.out_file_path)
+        if not os.path.exists(self.out_file_dir_path):
+            os.makedirs(self.out_file_dir_path)
 
-        self.out_file_path = self.out_file_path + "log.jsonld"
+        self.out_file_path = self.out_file_dir_path + "log.jsonld"
         self.out_file = open(self.out_file_path, "w+")
+
+        hw_info = subprocess.check_output(["lshw", "-json"]).decode("utf-8")
+        data = {}
+        self.iter_hw(json.loads(hw_info), data)
+
+        with open(self.out_file_dir_path + "system.json", "w+") as outfile:
+            json.dump(data, outfile)
+
+    def iter_hw(self, children, data):
+        if children["id"] == "memory":
+            if "size" in children:
+                data["memory"] = {}
+                data["memory"]["size"] = children["size"]
+                data["memory"]["units"] = children["units"]
+
+        if children["id"] == "cpu":
+            data["cpu"] = {}
+            data["cpu"]["vendor"] = children["vendor"]
+            data["cpu"]["product"] = children["product"]
+            data["cpu"]["capacity"] = children["capacity"]
+            data["cpu"]["units"] = children["units"]
+
+        if children["id"] == "display":
+            data["gpu"] = {}
+            data["gpu"]["vendor"] = children["vendor"]
+            data["gpu"]["product"] = children["product"]
+
+        for key, value in children.items():
+            if key == "children":
+                for item in value:
+                    self.iter_hw(item, data)
 
     def log(self):
         target_period = 1 / self.target_freq
@@ -38,13 +69,13 @@ class LinuxProcessLogger(Logger):
 
             process_list_str = subprocess.check_output(
                 ["ps", "-e", "wwh",
-                 "-o", "\"%p|%P|%r|%U|%c|\"",
+                 "-o", "\"%p||%P||%r||%U||%c||\"",
                  "-o", "cmd:500",
-                 "-o", "\"|%t|%x|\"",
+                 "-o", "\"||%t||%x||\"",
                  "-o", "lstart",
-                 "-o", "\"|%C|\"",
+                 "-o", "\"||%C||\"",
                  "-o", "%mem",
-                 "-o", "|%z|%y|",
+                 "-o", "||%z||%y||",
                  "-o", "psr"])
 
             window_list_str = subprocess.check_output(
@@ -81,7 +112,6 @@ class LinuxProcessLogger(Logger):
             data["timestamp"] = timestamp.isoformat()
             data["%cpu"] = psutil.cpu_percent(interval=None)
             mem = psutil.virtual_memory()
-            data["mem_total"] = mem.total
             data["mem_available"] = mem.available
             data["mem_used"] = mem.used
             data["focussed_window"] = focussed_window
@@ -90,32 +120,32 @@ class LinuxProcessLogger(Logger):
             for process in process_list_str:
                 process_data = {}
 
-                attribs = process.split("|")
+                attribs = process.split("||")
                 attribs = [x.strip() for x in attribs]
 
                 if len(attribs) > 1:
-                    process_data["pid"] = attribs[0]
-                    process_data["ppid"] = attribs[1]
-                    process_data["pgid"] = attribs[2]
-                    process_data["user"] = attribs[3]
-                    process_data["cmd_name"] = attribs[4]
-                    process_data["cmd"] = attribs[5]
-                    process_data["etime"] = attribs[6]
-                    process_data["ctime"] = attribs[7]
-                    process_data["start"] = attribs[8]
-                    process_data["%cpu"] = attribs[9]
-                    process_data["%mem"] = attribs[10]
-                    process_data["mem"] = attribs[11]
-                    process_data["tty"] = attribs[12]
-                    process_data["psr"] = attribs[13]
+                    if len(attribs) == 14:
+                        process_data["pid"] = attribs[0]
+                        process_data["ppid"] = attribs[1]
+                        process_data["pgid"] = attribs[2]
+                        process_data["user"] = attribs[3]
+                        process_data["cmd_name"] = attribs[4]
+                        process_data["cmd"] = attribs[5]
+                        process_data["etime"] = attribs[6]
+                        process_data["ctime"] = attribs[7]
+                        process_data["start"] = attribs[8]
+                        process_data["%cpu"] = attribs[9]
+                        process_data["%mem"] = attribs[10]
+                        process_data["mem"] = attribs[11]
+                        process_data["psr"] = attribs[13]
 
-                    process_data["windows"] = []
+                        process_data["windows"] = []
 
-                    for window in windows:
-                        if window["pid"] == process_data["pid"]:
-                            process_data["windows"].append(window)
+                        for window in windows:
+                            if window["pid"] == process_data["pid"]:
+                                process_data["windows"].append(window)
 
-                    data["processes"].append(process_data)
+                        data["processes"].append(process_data)
 
             self.out_file.write(json.dumps(data) + "\n")
             self.out_file.flush()
