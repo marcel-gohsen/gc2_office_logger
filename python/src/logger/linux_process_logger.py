@@ -20,7 +20,7 @@ class LinuxProcessLogger(Logger):
         if not os.path.exists(self.out_file_dir_path):
             os.makedirs(self.out_file_dir_path)
 
-        self.out_file_path = self.out_file_dir_path + "log.jsonld"
+        self.out_file_path = self.out_file_dir_path + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".jsonld"
         self.out_file = open(self.out_file_path, "w+")
 
         hw_info = subprocess.check_output(["lshw", "-json"]).decode("utf-8")
