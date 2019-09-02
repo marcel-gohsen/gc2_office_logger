@@ -13,7 +13,7 @@ class LinuxProcessLogger(Logger):
     def __init__(self, target_freq=1):
         self.target_freq = target_freq
         self.mac_address = getnode()
-        self.mac_address = ":".join(("%012X" % self.mac_address)[i:i + 2] for i in range(0, 12, 2))
+        self.mac_address = "-".join(("%012X" % self.mac_address)[i:i + 2] for i in range(0, 12, 2))
 
         self.out_file_dir_path = "./logs/" + self.mac_address + "/"
 
@@ -25,10 +25,18 @@ class LinuxProcessLogger(Logger):
 
         hw_info = subprocess.check_output(["lshw", "-json"]).decode("utf-8")
         data = {}
-        self.iter_hw(json.loads(hw_info), data)
 
         with open(self.out_file_dir_path + "system.json", "w+") as outfile:
-            json.dump(data, outfile)
+            try:
+                hw_infos = json.loads(hw_info)
+                self.iter_hw(hw_infos, data)
+                json.dump(data, outfile)
+            except ValueError:
+                outfile.write(hw_info)
+
+        os.system("gnome-terminal -- sh -c 'echo \"OfficeLogger started succesfully!\";sleep 2s;'")
+
+        self.err_log = open(self.out_file_dir_path + "err_log.txt", "w+")
 
     def iter_hw(self, children, data):
         if children["id"] == "memory":
@@ -67,28 +75,46 @@ class LinuxProcessLogger(Logger):
 
             timestamp = datetime.datetime.now()
 
-            process_list_str = subprocess.check_output(
-                ["ps", "-e", "wwh",
-                 "-o", "\"%p||%P||%r||%U||%c||\"",
-                 "-o", "cmd:500",
-                 "-o", "\"||%t||%x||\"",
-                 "-o", "lstart",
-                 "-o", "\"||%C||\"",
-                 "-o", "%mem",
-                 "-o", "||%z||%y||",
-                 "-o", "psr"])
+            try:
+                process_list_str = subprocess.check_output(
+                    ["ps", "-e", "wwh",
+                     "-o", "\"%p||%P||%r||%U||%c||\"",
+                     "-o", "cmd:500",
+                     "-o", "\"||%t||%x||\"",
+                     "-o", "lstart",
+                     "-o", "\"||%C||\"",
+                     "-o", "%mem",
+                     "-o", "||%z||%y||",
+                     "-o", "psr"])
 
-            window_list_str = subprocess.check_output(
-                ["wmctrl", "-lpx"]
-            )
+                process_list_str = process_list_str.decode("utf-8").replace("\"", "").split("\n")
 
-            window_focus_str = subprocess.check_output(
-                ["xprop", "-root", "_NET_ACTIVE_WINDOW"]
-            )
+            except subprocess.CalledProcessError as err:
+                self.err_log.write("{} | command '{}' return with error (code {}): {}\n"
+                                   .format(timestamp, err.cmd, err.returncode, err.output))
+                process_list_str = []
 
-            process_list_str = process_list_str.decode("utf-8").replace("\"", "").split("\n")
-            window_list_str = window_list_str.decode("utf-8").split("\n")
-            window_focus_str = window_focus_str.decode("utf-8").replace("\n", "").split("window id # ")[1]
+            try:
+                window_list_str = subprocess.check_output(
+                    ["wmctrl", "-lpx"]
+                )
+
+                window_list_str = window_list_str.decode("utf-8").split("\n")
+            except subprocess.CalledProcessError as err:
+                self.err_log.write("{} | command '{}' return with error (code {}): {}\n"
+                                   .format(timestamp, err.cmd, err.returncode, err.output))
+                window_list_str = []
+
+            try:
+                window_focus_str = subprocess.check_output(
+                    ["xprop", "-root", "_NET_ACTIVE_WINDOW"]
+                )
+
+                window_focus_str = window_focus_str.decode("utf-8").replace("\n", "").split("window id # ")[1]
+            except subprocess.CalledProcessError as err:
+                self.err_log.write("{} | command '{}' return with error (code {}): {}\n"
+                                   .format(timestamp, err.cmd, err.returncode, err.output))
+                window_focus_str = []
 
             windows = []
             focussed_window = None
