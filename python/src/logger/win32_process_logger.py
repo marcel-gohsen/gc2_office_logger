@@ -25,13 +25,10 @@ class Win32ProcessLogger(Logger):
             if child.MACAddress is not None:
                 self.mac = child.MACAddress
 
-        self.__save_hw_info()
-
-        # self.iteration_count = 0
-        # os.makedirs("logs", exist_ok=True)
         os.makedirs(os.path.join("logs", self.mac.replace(":", "-")), exist_ok=True)
-
         out_path = os.path.join("logs", self.mac.replace(":", "-"), datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
+
+        self.__save_hw_info()
         self.out_file = open(out_path, "w+")
         self.target_freq = target_freq
 
@@ -53,6 +50,9 @@ class Win32ProcessLogger(Logger):
         for child in children:
             mem_info = {}
             mem_info["name"] = child.Name
+            mem_info["vendor"] = child.Manufacturer
+            mem_info["size"] = child.Capacity
+            mem_info["speed"] = child.Speed
 
             hw_info["memory"].append(mem_info)
 
@@ -92,44 +92,6 @@ class Win32ProcessLogger(Logger):
 
         win_informations.append(window)
 
-        # process_info = {"iter_id": self.iteration_count, "timestamp": datetime.datetime.now().isoformat()}
-        #
-
-        # process_info["process_id"] = thread_process_id[1]
-        # process_info["thread_id"] = thread_process_id[0]
-        #
-        # if str(process_info["process_id"]) + "-" + str(process_info["thread_id"]) in self.id_history:
-        #     return
-        #
-        # self.id_history.append(
-        #     str(process_info["process_id"]) + "-" + str(process_info["thread_id"]))
-        #
-        # children = self.wmi.ExecQuery("Select * from win32_process "
-        #                               "where ProcessId=" + str(process_info["process_id"]))
-        # for child in children:
-        #     process_info["process_name"] = child.Name
-        #     process_info["exec_path"] = child.ExecutablePath
-        #     process_info["cmd"] = child.CommandLine
-        #     process_info["creation_time"] = child.CreationDate
-        #     process_info["state"] = child.ExecutionState
-        #
-        # process_info["window_title"] = win32gui.GetWindowText(hwnd)
-        #
-        # is_foreground = \
-        #     win32process.GetWindowThreadProcessId(win32gui.GetForegroundWindow()) == thread_process_id
-        #
-        # process_info["foreground"] = is_foreground
-        # try:
-        #     h_proc = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, False, process_info["process_id"])
-        #     process_times = win32process.GetProcessTimes(h_proc)
-        #     process_info["user_time"] = process_times["UserTime"] * 100 / (10 ** 6)
-        #     process_info["memory"] = win32process.GetProcessMemoryInfo(h_proc)
-        #     process_info["io_counter"] = win32process.GetProcessIoCounters(h_proc)
-        # except Exception:
-        #     pass
-        #
-        # self.out_file.write(str(process_info) + "\n")
-
     def log(self):
         freq = 0
         target_period = None
@@ -139,7 +101,7 @@ class Win32ProcessLogger(Logger):
 
         while True:
             start = time.time()
-            # print("\rLogging freq: " + str(freq) + " Hz", end="")
+            print("\rLogging freq: " + str(round(freq, 2)) + " Hz", end="")
 
             mem = psutil.virtual_memory()
 
