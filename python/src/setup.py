@@ -14,13 +14,12 @@ if platform.system() == "Windows":
             "win32com",
             "win32con",
             "os",
-            "time",
-            "tendo"],
+            "time"],
         "build_exe": "../build/" + platform.system().lower()}
     name = "OfficeLogger_win32.exe"
 elif platform.system() == "Linux":
     build_exe_options = {
-        "packages": ["os", "uuid", "tendo"],
+        "packages": ["os", "uuid"],
         "init_script": "ConsoleSetLibPath",
         "build_exe": "../build/" + platform.system().lower()
     }
